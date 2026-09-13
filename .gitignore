@@ -2,3 +2,4 @@
 .playwright-cli/
 pw-config.ini
 store/package/
+.env

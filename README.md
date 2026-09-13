@@ -25,7 +25,9 @@ built-in Translator API. No external services, no API keys.
   the comment box.
 
 Language packs are downloaded by Chrome on first use of a language pair;
-download progress is shown near the bottom-right button.
+download progress is shown near the bottom-right button. Text already in the
+output language is detected (Chrome's LanguageDetector, extra model download
+on first use) and left untranslated.
 
 ## Scope
 

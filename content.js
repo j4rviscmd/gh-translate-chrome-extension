@@ -110,6 +110,87 @@ async function getTranslator(source, target) {
   return translators.get(key);
 }
 
+// LanguageDetector (Chrome 138+, same gate as Translator) skips text that is
+// already in the output language: feeding Japanese content through an
+// en->ja Translator mangles it.
+let detectorPromise = null;
+
+async function getDetector() {
+  if (!('LanguageDetector' in window)) return null;
+  if (!detectorPromise) {
+    detectorPromise = LanguageDetector.create();
+    // Why: a rejected promise must not stay cached — translatePage's
+    // activation-retry path re-enters here after a click, and needs a fresh
+    // create() (same pattern as the translators cache above).
+    detectorPromise.catch(() => (detectorPromise = null));
+  }
+  return detectorPromise;
+}
+
+// Detection needs a few characters to be reliable; shorter text goes to the
+// translator as-is. Primary-subtag match: a 'zh' detection satisfies a
+// 'zh-Hant' target, so Simplified text skips too — Hans->Hant conversion is
+// out of scope.
+// Script heuristic used when the detection model is unavailable
+// (LanguageDetector.availability() === 'unavailable' happens on real Chrome
+// installs; create() then rejects with NotSupportedError). Only languages
+// whose script is self-identifying are covered — Latin-script pairs fall
+// through to translation there.
+// ponytail: CJK han ranges are shared, so zh text against a ja target (or a
+// kana-free ja node) can be mis-skipped; acceptable until a real complaint,
+// the detector path disambiguates when the model exists.
+const SCRIPT_RANGES = {
+  ar: /[\u0600-\u06FF]/,
+  bg: /[\u0400-\u04FF]/,
+  el: /[\u0370-\u03FF]/,
+  he: /[\u0590-\u05FF]/,
+  hi: /[\u0900-\u097F]/,
+  mr: /[\u0900-\u097F]/,
+  ja: /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/,
+  kn: /[\u0C80-\u0CFF]/,
+  ko: /[\uAC00-\uD7AF]/,
+  ru: /[\u0400-\u04FF]/,
+  ta: /[\u0B80-\u0BFF]/,
+  te: /[\u0C00-\u0C7F]/,
+  th: /[\u0E00-\u0E7F]/,
+  uk: /[\u0400-\u04FF]/,
+  zh: /[\u3400-\u4DBF\u4E00-\u9FFF]/,
+};
+
+function hasScript(text, lang) {
+  return SCRIPT_RANGES[primarySubtag(lang)]?.test(text) ?? false;
+}
+
+// ponytail: DETECT_MIN_CHARS=4 skips detection on very short nodes; lower it
+// if mistranslated 2-3 char CJK nodes become a real complaint.
+const DETECT_MIN_CHARS = 4;
+const DETECT_CONFIDENCE = 0.5;
+
+function primarySubtag(code) {
+  return code.split('-')[0].toLowerCase();
+}
+
+// True when text is confidently `lang` and must not be re-translated.
+// A missing detector falls back to the script heuristic; retryable errors
+// bubble up so translatePage's activation-retry path can download the
+// detection model; any other failure returns false (translate as-is).
+async function isLanguage(text, lang, detector) {
+  if (!detector) return hasScript(text, lang);
+  if (text.trim().length < DETECT_MIN_CHARS) return false;
+  try {
+    const [top] = await detector.detect(text);
+    if (!top) return false;
+    return (
+      primarySubtag(top.detectedLanguage) === primarySubtag(lang) &&
+      top.confidence >= DETECT_CONFIDENCE
+    );
+  } catch (err) {
+    if (isRetryableError(err)) throw err;
+    console.warn('[GitHub Translate] language detection failed', err);
+    return false;
+  }
+}
+
 function collectTextNodes(element, out) {
   for (const child of element.childNodes) {
     if (child.nodeType === Node.ELEMENT_NODE) {
@@ -135,8 +216,16 @@ function collectTargetNodes(selectors = activeSelectors()) {
 async function translateNodes(nodes) {
   if (!nodes.length) return;
   const translator = await getTranslator(settings.source, settings.target);
+  // Retryable creation errors bubble to translatePage's activation-retry
+  // path; anything else degrades to translating without language skips.
+  const detector = await getDetector().catch((err) => {
+    if (isRetryableError(err)) throw err;
+    console.warn('[GitHub Translate] LanguageDetector unavailable', err);
+    return null;
+  });
   for (const node of nodes) {
     if (originals.has(node)) continue;
+    if (await isLanguage(node.nodeValue, settings.target, detector)) continue;
     const result = await translator.translate(node.nodeValue);
     originals.set(node, node.nodeValue);
     node.nodeValue = result;
@@ -344,10 +433,15 @@ async function translatePanelInput() {
   try {
     // Reverse direction: user language -> page language.
     const translator = await getTranslator(settings.target, settings.source);
+    // Typing is a user gesture, so detector creation cannot fail for lack of
+    // activation; any other failure just translates every line.
+    const detector = await getDetector().catch(() => null);
     // Translator.translate() collapses newlines, so translate line by line.
+    // Lines already in the page language (source) pass through untouched.
     const lines = [];
     for (const line of text.split('\n')) {
-      lines.push(line.trim() ? await translator.translate(line) : line);
+      const passthrough = !line.trim() || (await isLanguage(line, settings.source, detector));
+      lines.push(passthrough ? line : await translator.translate(line));
     }
     if (seq !== requestSeq) return; // a newer input superseded this request
     panelOutput.textContent = lines.join('\n');

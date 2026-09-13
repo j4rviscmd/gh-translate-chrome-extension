@@ -88,8 +88,9 @@ body.ght-translate-page #ght-panel.open {
 
 /* Why: the toast is gated by its own class instead of ght-translate-page so
    it also shows on pages with no helper button (readme overview pages), and
-   stays on composer pages, where the panel's language-pack download progress
-   is reported through it (see onPageChange in content.js). */
+   on composer pages, where the panel's language-pack download progress is
+   reported through it (see onPageChange in content.js; with the helper
+   setting off, composers have neither panel nor toast). */
 body.ght-status-page #ght-status {
   display: block;
   position: fixed;

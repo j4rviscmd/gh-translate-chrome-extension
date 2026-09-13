@@ -37,8 +37,10 @@ function currentPage() {
 const COMPOSER_PATTERNS = [/\/issues\/new(\/choose)?\/?$/, /^\/[^/]+\/[^/]+\/compare\//];
 
 // The helper is for drafting comments, so readme pages (no comment box)
-// only get the status toast, not the button/panel.
+// only get the status toast, not the button/panel. settings.helper hides
+// the button everywhere.
 function hasHelperUI() {
+  if (!settings.helper) return false;
   const page = currentPage();
   return (page !== null && page !== 'readme') || COMPOSER_PATTERNS.some((p) => p.test(location.pathname));
 }
@@ -406,6 +408,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const wasTranslated = translated;
     if (wasTranslated) restorePage();
     loadSettings().then(() => {
+      updateBodyClasses();
       if (translating) {
         // A run is in flight with the old settings; redo it when it finishes.
         rerunOnFinish = true;
@@ -544,21 +547,29 @@ function scheduleAutoTranslate() {
   setTimeout(tryAutoTranslate, SETTLE_MAX_MS); // hard cap
 }
 
+// Two gates: helper surfaces get the button/panel, every translatable
+// page (readme included) and composers (panel pack downloads) get the
+// status toast. Shared by navigation and settings changes so the helper
+// toggle applies without a reload.
+function updateBodyClasses() {
+  const page = currentPage();
+  const helper = hasHelperUI();
+  document.body.classList.toggle('ght-translate-page', helper);
+  document.body.classList.toggle('ght-status-page', page !== null || helper);
+  // Why: helper-off only drops the visibility class (see #ght-panel.open rule
+  // in content.css); the panel element itself stays in the DOM, so without
+  // this reset re-enabling the helper via settings-changed (no reload) would
+  // resurface it stuck open.
+  if (!helper) panel?.classList.remove('open');
+}
+
 function onPageChange() {
   // GitHub's soft navigation re-renders body children, wiping our appended
   // UI (button/panel/status); buildUI() no-ops while still attached.
   buildUI();
+  updateBodyClasses();
   const page = currentPage();
-  // Two gates: helper surfaces get the button/panel, every translatable
-  // page (readme included) and composers (panel pack downloads) get the
-  // status toast.
-  const helper = hasHelperUI();
-  document.body.classList.toggle('ght-translate-page', helper);
-  document.body.classList.toggle('ght-status-page', page !== null || helper);
-  if (!page) {
-    panel?.classList.remove('open');
-    hideStatus();
-  }
+  if (!page) hideStatus();
   // New DOM after navigation: old Text nodes (and their originals) are gone.
   translated = false;
   if (page) scheduleAutoTranslate();

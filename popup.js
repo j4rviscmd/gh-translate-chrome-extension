@@ -21,6 +21,7 @@ const sourceSelect = $('source-language');
 const targetSelect = $('target-language');
 const toggleButton = $('toggle-translate');
 const autoCheckbox = $('auto-translate');
+const helperCheckbox = $('helper-toggle');
 const areaCheckboxes = document.querySelectorAll('input[data-page][data-area]');
 const statusEl = $('status');
 
@@ -47,6 +48,7 @@ function collectSettings() {
     source: sourceSelect.value,
     target: targetSelect.value,
     auto: autoCheckbox.checked,
+    helper: helperCheckbox.checked,
     areas,
   };
 }
@@ -94,6 +96,7 @@ toggleButton.addEventListener('click', async () => {
 sourceSelect.addEventListener('change', saveSettings);
 targetSelect.addEventListener('change', saveSettings);
 autoCheckbox.addEventListener('change', saveSettings);
+helperCheckbox.addEventListener('change', saveSettings);
 for (const checkbox of areaCheckboxes) {
   checkbox.addEventListener('change', saveSettings);
 }
@@ -102,6 +105,7 @@ for (const checkbox of areaCheckboxes) {
   const settings = normalizeSettings(await chrome.storage.sync.get(null));
   populateSelects(settings);
   autoCheckbox.checked = settings.auto;
+  helperCheckbox.checked = settings.helper;
   for (const checkbox of areaCheckboxes) {
     checkbox.checked = settings.areas[checkbox.dataset.page][checkbox.dataset.area];
   }

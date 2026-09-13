@@ -17,9 +17,10 @@ built-in Translator API. No external services, no API keys.
 ## Usage
 
 - **Toolbar popup**: toggle page translation, pick the language pair
-  (from → to), turn auto-translate on page load on/off, and choose which
+  (from → to), turn auto-translate on page load on/off, choose which
   areas to translate (title / body & comments / list titles) separately
-  for issues, pull requests, and READMEs (content only).
+  for issues, pull requests, and READMEs (content only), and show or hide
+  the input helper button.
 - **Bottom-right button on issue/PR pages**: opens an input box. Type in
   your language, get the translated text (reverse direction), copy it into
   the comment box.

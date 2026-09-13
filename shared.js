@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS = {
   source: 'en',
   target: 'ja',
   auto: true,
+  helper: false,
   areas: {
     issue: { title: true, body: true, list: true },
     pull: { title: true, body: true, list: true },

@@ -81,11 +81,11 @@ function collectTextNodes(element, out) {
   }
 }
 
-function collectTargetNodes(root = document) {
+function collectTargetNodes(selectors = activeSelectors()) {
   const nodes = [];
-  const selector = activeSelectors().join(',');
+  const selector = selectors.join(',');
   if (selector) {
-    for (const element of root.querySelectorAll(selector)) {
+    for (const element of document.querySelectorAll(selector)) {
       collectTextNodes(element, nodes);
     }
   }
@@ -129,6 +129,9 @@ async function translatePage() {
   } finally {
     translating = false;
   }
+  // Why: the rerun's translatePage() reaches the drain below on its own run;
+  // falling through here would interleave a second drain with it.
+  if (applyRerun()) return;
   // Comments that arrived mid-run were queued; translate them now.
   if (translated && pendingComments.length) drainPendingComments();
 }
@@ -150,7 +153,8 @@ function queueTranslateOnActivation() {
     activationArmed = false;
     removeEventListener('click', onActivate);
     removeEventListener('keydown', onActivate);
-    if (settings.auto && !translated) translatePage();
+    // Manual toggles reach this retry path too, so settings.auto must not gate it.
+    if (!translated) translatePage();
   };
   addEventListener('click', onActivate);
   addEventListener('keydown', onActivate);
@@ -176,6 +180,25 @@ async function drainPendingComments() {
   } finally {
     translating = false;
   }
+  // Why: this drain is a run that can be in flight when settings change, so
+  // the rerun flag must be consumed on this path too — otherwise the pending
+  // rerun never fires until some later run happens to finish.
+  applyRerun();
+}
+
+// Set when settings change mid-run: once the current translation finishes,
+// restore and re-translate with the new settings.
+let rerunOnFinish = false;
+
+function applyRerun() {
+  if (!rerunOnFinish) return false;
+  rerunOnFinish = false;
+  // Why: restorePage() must run first — it resets `translated`, and
+  // translatePage() early-returns while `translated` is still true, so
+  // swapping the two lines would silently skip the re-translate.
+  restorePage();
+  translatePage();
+  return true;
 }
 
 // Mutations inside our own UI (status toasts, panel) must not re-trigger this
@@ -202,7 +225,11 @@ const observer = new MutationObserver((mutations) => {
 });
 
 function restorePage() {
-  for (const node of collectTargetNodes()) {
+  // Walk ALL selectors, not just active areas: an area disabled mid-run
+  // must still get its already-translated nodes restored (and their
+  // originals entries dropped, or re-enabling later would skip them).
+  const allSelectors = Object.values(AREA_SELECTORS).flat();
+  for (const node of collectTargetNodes(allSelectors)) {
     const original = originals.get(node);
     if (original !== undefined) {
       node.nodeValue = original;
@@ -234,6 +261,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const wasTranslated = translated;
     if (wasTranslated) restorePage();
     loadSettings().then(() => {
+      if (translating) {
+        // A run is in flight with the old settings; redo it when it finishes.
+        rerunOnFinish = true;
+        return;
+      }
       // Re-translate with the new pair when the page was already translated.
       if (wasTranslated) translatePage();
     });
@@ -374,11 +406,18 @@ function onPageChange() {
 // GitHub's React issue UI no longer fires turbo:load on soft navigation,
 // so URL changes are detected via the Navigation API and, as a fallback,
 // at the top of the MutationObserver callback.
-let lastUrl = location.href;
+// Compare pathname+search only: same-document hash jumps (e.g. permalinks
+// like #issuecomment-...) must not reset the translation state.
+function currentPath() {
+  return location.pathname + location.search;
+}
+
+let lastPath = currentPath();
 
 function handlePossibleUrlChange() {
-  if (location.href !== lastUrl) {
-    lastUrl = location.href;
+  const current = currentPath();
+  if (current !== lastPath) {
+    lastPath = current;
     onPageChange();
   }
 }
@@ -388,7 +427,7 @@ if ('navigation' in window) {
 }
 
 document.addEventListener('turbo:load', () => {
-  lastUrl = location.href;
+  lastPath = currentPath();
   onPageChange();
 });
 

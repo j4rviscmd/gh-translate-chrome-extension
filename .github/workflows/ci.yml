@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax-check scripts
+        run: |
+          node --check content.js
+          node --check popup.js
+          node --check shared.js
+
+      # Why include-list instead of excluding dev files: new local-only files
+      # (configs, sources, scratch dirs) must never leak into the store build.
+      - name: Build store zip
+        run: |
+          printf '%s\n' \
+            manifest.json \
+            content.js content.css \
+            popup.html popup.js popup.css \
+            shared.js \
+            icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png \
+            > zip-list.txt
+          zip github-translate-extension.zip -@ < zip-list.txt
+
+      # Why: this zip is the actual Chrome Web Store submission package, and CI is where
+      # it is produced — so manifest icons keys vs real PNG dimensions (manifest.json)
+      # must be cross-checked here, before submission.
+      - name: Validate manifest, icons, and package
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          const icons = manifest.icons || {};
+          if (manifest.manifest_version !== 3) throw new Error('manifest_version must be 3');
+
+          // Every file manifest references must exist and be inside the zip.
+          const zipped = new Set(
+            fs.readFileSync('zip-list.txt', 'utf8').split('\n').filter(Boolean)
+          );
+          const referenced = [
+            ...Object.values(icons),
+            manifest.action?.default_popup,
+            ...(manifest.content_scripts || []).flatMap((cs) => [...(cs.js || []), ...(cs.css || [])]),
+          ].filter(Boolean);
+          for (const rel of referenced) {
+            if (!fs.existsSync(rel)) throw new Error(`manifest references missing file: ${rel}`);
+            if (!zipped.has(rel)) throw new Error(`manifest-referenced file not in zip: ${rel}`);
+          }
+
+          // PNG IHDR width/height (bytes 16-23, big-endian) must match the icon key.
+          for (const [size, rel] of Object.entries(icons)) {
+            const buf = fs.readFileSync(rel);
+            if (buf.readUInt32BE(12) !== 0x49484452) throw new Error(`${rel}: not a PNG`);
+            const [w, h] = [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+            if (w !== Number(size) || h !== Number(size)) {
+              throw new Error(`${rel}: expected ${size}x${size}, got ${w}x${h}`);
+            }
+          }
+          console.log(`manifest OK: ${referenced.length} referenced files present, icons verified`);
+          EOF
+
+      # Note: the artifact is intended for reuse by a future CD job (chrome-webstore-upload),
+      # not just manual download (planned; no such job exists in the repo yet).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-translate-extension
+          path: github-translate-extension.zip
+          retention-days: 14

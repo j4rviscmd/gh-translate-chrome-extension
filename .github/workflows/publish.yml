@@ -1,0 +1,71 @@
+name: Publish
+
+# Uploads the store package to the Chrome Web Store and submits it for
+# review via the Publishing API v2 (plain curl, no third-party action).
+# Runs on version tags (v0.1.1, v1.0.0, ...) and manually.
+# Secrets (set in repo settings, see issue #6):
+#   CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN - OAuth credentials
+#   CWS_PUBLISHER_ID - store account publisher ID (dashboard > Account)
+#   CWS_EXTENSION_ID - the store item ID
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The store rejects a version it has already seen, so the tag and
+      # manifest must move together; fail here instead of at upload.
+      - name: Check tag matches manifest version
+        run: |
+          VERSION="v$(node -p "require('./manifest.json').version")"
+          if [ "$VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "tag $GITHUB_REF_NAME does not match manifest version $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Build store zip
+        run: |
+          printf '%s\n' \
+            manifest.json \
+            content.js content.css \
+            popup.html popup.js popup.css \
+            shared.js \
+            icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png \
+            > zip-list.txt
+          zip github-translate-extension.zip -@ < zip-list.txt
+
+      - name: Get access token
+        run: |
+          RESP=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${{ secrets.CWS_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.CWS_CLIENT_SECRET }}" \
+            -d "refresh_token=${{ secrets.CWS_REFRESH_TOKEN }}" \
+            -d "grant_type=refresh_token")
+          TOKEN=$(node -p "JSON.parse(process.argv[1]).access_token ?? ''" "$RESP")
+          if [ -z "$TOKEN" ]; then echo "token exchange failed: $RESP" >&2; exit 1; fi
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Upload package
+        run: |
+          curl -sf -X POST \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${{ secrets.CWS_PUBLISHER_ID }}/items/${{ secrets.CWS_EXTENSION_ID }}:upload" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -T github-translate-extension.zip
+
+      - name: Publish (submit for review)
+        run: |
+          curl -sf -X POST \
+            "https://chromewebstore.googleapis.com/v2/publishers/${{ secrets.CWS_PUBLISHER_ID }}/items/${{ secrets.CWS_EXTENSION_ID }}:publish" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Type: application/json" \
+            -d '{"reviewInProduction": true}'

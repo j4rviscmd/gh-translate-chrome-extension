@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <button id="toggle-translate" class="primary">Translate</button>
+
+  <div class="row">
+    <select id="source-language" aria-label="Source language"></select>
+    <span class="arrow">&rarr;</span>
+    <select id="target-language" aria-label="Target language"></select>
+  </div>
+
+  <label class="row">
+    <input type="checkbox" id="auto-translate">
+    <span>Auto-translate on page load</span>
+  </label>
+
+  <fieldset>
+    <legend>Areas</legend>
+
+    <div class="category">
+      <div class="category-title">Issues</div>
+      <label class="row"><input type="checkbox" data-area="title"><span>Title</span></label>
+      <label class="row"><input type="checkbox" data-area="body"><span>Body &amp; comments</span></label>
+    </div>
+
+    <!-- TODO: enable this section when /pull/ pages are supported (see issue #1 "見送り") -->
+    <div class="category disabled">
+      <div class="category-title">Pull requests</div>
+      <label class="row"><input type="checkbox" disabled><span>Title</span></label>
+      <label class="row"><input type="checkbox" disabled><span>Body &amp; comments</span></label>
+      <label class="row"><input type="checkbox" disabled><span>Labels</span></label>
+    </div>
+  </fieldset>
+
+  <div id="status" class="status" hidden></div>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

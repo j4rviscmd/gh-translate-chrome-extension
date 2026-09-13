@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "138",
+  "name": "GitHub Translate",
+  "version": "0.1.0",
+  "description": "Translate GitHub issue content with Chrome's built-in Translator API",
+  "permissions": ["storage"],
+  "host_permissions": ["https://github.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GitHub Translate"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["shared.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+/* All helper UI is scoped to body.ght-issue-page (issue detail pages only). */
+
+#ght-panel-button,
+#ght-panel,
+#ght-status {
+  display: none;
+}
+
+body.ght-issue-page #ght-panel-button {
+  display: flex;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #d0d7de;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+body.ght-issue-page #ght-panel {
+  display: none;
+  position: fixed;
+  right: 20px;
+  bottom: 74px;
+  z-index: 9999;
+  width: 420px;
+  padding: 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2328;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+body.ght-issue-page #ght-panel.open {
+  display: block;
+}
+
+#ght-panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+#ght-panel-output {
+  min-height: 20px;
+  margin: 8px 0;
+  padding: 6px;
+  border: 1px dashed #d0d7de;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#ght-panel button {
+  padding: 4px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background: #f6f8fa;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#ght-panel-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+body.ght-issue-page #ght-status {
+  display: block;
+  position: fixed;
+  right: 76px;
+  bottom: 30px;
+  z-index: 9998;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(31, 35, 40, 0.85);
+  color: #ffffff;
+  font-size: 12px;
+  font-family: system-ui, sans-serif;
+}
+
+body.ght-issue-page #ght-status[hidden] {
+  display: none;
+}
+
+/* Dark mode (GitHub dark theme palettes) */
+@media (prefers-color-scheme: dark) {
+  body.ght-issue-page #ght-panel-button {
+    border-color: #3d444d;
+    background: #212830;
+  }
+
+  body.ght-issue-page #ght-panel {
+    border-color: #3d444d;
+    background: #151b23;
+    color: #f0f6fc;
+  }
+
+  #ght-panel textarea {
+    border-color: #3d444d;
+    background: #0d1117;
+    color: #f0f6fc;
+  }
+
+  #ght-panel-output {
+    border-color: #3d444d;
+  }
+
+  #ght-panel button {
+    border-color: #3d444d;
+    background: #212830;
+    color: #f0f6fc;
+  }
+}

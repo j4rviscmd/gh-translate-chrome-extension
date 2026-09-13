@@ -1,20 +1,36 @@
-// Translates GitHub issue pages with Chrome's built-in Translator API (Chrome 138+).
-// Scope: issue detail pages only for now. /pull/ support is a future task (see issue #1).
+// Translates GitHub issue/PR pages with Chrome's built-in Translator API (Chrome 138+).
+// Scope: issue details and PR conversation tabs.
 
-const ISSUE_DETAIL_PATTERN = /\/issues\/\d+/;
+// Anchored patterns: pull matches the conversation tab only (/files,
+// /commits subpaths are out of scope by design).
+const PAGE_PATTERNS = {
+  issue: /\/issues\/\d+\/?$/,
+  pull: /\/pull\/\d+\/?$/,
+};
 
-// Selectors verified against GitHub's React issue pages (2026-09).
-// Old classes (.js-issue-title / .comment-body / .IssueLabel) no longer exist;
-// data-testid hooks are the stable contract.
-// stickyTitle: the sticky header title, mounted by React only after scrolling.
+function currentPage() {
+  if (PAGE_PATTERNS.issue.test(location.pathname)) return 'issue';
+  if (PAGE_PATTERNS.pull.test(location.pathname)) return 'pull';
+  return null;
+}
+
+// Selectors verified against GitHub's React issue/PR pages (2026-09).
+// main h1: the single page title on both surfaces, scoped to <main> so
+// Primer dialog titles (also rendered as h1) are never picked up;
+// .markdown-title: the sticky header title mounted after scrolling
+// (bdi on issues, span on PRs); .markdown-body: issue/PR descriptions and
+// comments. Diff tables on the PR files tab live outside these selectors,
+// so code is naturally excluded.
 const AREA_SELECTORS = {
-  title: ['[data-testid="issue-header"] h1', '[data-testid="issue-title-sticky"]'],
+  title: ['main h1', '.markdown-title'],
   body: ['.markdown-body'],
 };
 
 function activeSelectors() {
+  const page = currentPage();
+  if (!page) return [];
   return Object.entries(AREA_SELECTORS)
-    .filter(([area]) => settings.areas[area])
+    .filter(([area]) => settings.areas[page][area])
     .flatMap(([, selectors]) => selectors);
 }
 
@@ -34,10 +50,6 @@ const translators = new Map();
 
 let panelButton, panel, panelTextarea, panelOutput, copyButton, statusEl;
 let inputTimer;
-
-function isIssueDetail() {
-  return ISSUE_DETAIL_PATTERN.test(location.pathname);
-}
 
 async function loadSettings() {
   settings = normalizeSettings(await chrome.storage.sync.get(null));
@@ -205,12 +217,12 @@ function applyRerun() {
 // observer: showStatus()/panel updates are childList mutations under body and
 // would otherwise start an infinite observer-drain loop that freezes the page.
 // Catches elements React mounts after initial render: lazy-loaded comments
-// (.markdown-body) and the sticky header title (issue-title-sticky).
+// (.markdown-body) and the sticky header title (.markdown-title).
 const observer = new MutationObserver((mutations) => {
   handlePossibleUrlChange();
-  if (!settings.areas.body && !settings.areas.title) return;
   if (!translated && !translating) return;
   const selector = activeSelectors().join(',');
+  if (!selector) return; // no active area for the current page type
   let added = false;
   for (const mutation of mutations) {
     if (mutation.target.closest?.('#ght-panel-button, #ght-panel, #ght-status')) continue;
@@ -242,11 +254,11 @@ function restorePage() {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'get-state') {
-    sendResponse({ supported: isIssueDetail(), translated });
+    sendResponse({ supported: currentPage() !== null, translated });
     return false;
   }
   if (message.type === 'toggle-translate') {
-    if (!isIssueDetail()) {
+    if (!currentPage()) {
       sendResponse({ supported: false, translated: false });
     } else if (translated) {
       restorePage();
@@ -313,6 +325,9 @@ async function translatePanelInput() {
 }
 
 function buildUI() {
+  // Idempotent: skip when UI is already live (init may run after an early
+  // turbo:load already built it, or the previous build is still attached).
+  if (panelButton?.isConnected) return;
   panelButton = document.createElement('button');
   panelButton.id = 'ght-panel-button';
   panelButton.type = 'button';
@@ -380,7 +395,7 @@ const settleObserver = new MutationObserver(() => {
 function tryAutoTranslate() {
   settleObserver.disconnect();
   clearTimeout(autoTimer);
-  if (settings.auto && !translated && isIssueDetail()) translatePage();
+  if (settings.auto && !translated && currentPage()) translatePage();
 }
 
 function scheduleAutoTranslate() {
@@ -392,15 +407,18 @@ function scheduleAutoTranslate() {
 }
 
 function onPageChange() {
-  const issuePage = isIssueDetail();
-  document.body.classList.toggle('ght-issue-page', issuePage);
-  if (!issuePage) {
+  // GitHub's soft navigation re-renders body children, wiping our appended
+  // UI (button/panel/status); buildUI() no-ops while still attached.
+  buildUI();
+  const page = currentPage();
+  document.body.classList.toggle('ght-translate-page', !!page);
+  if (!page) {
     panel?.classList.remove('open');
     hideStatus();
   }
   // New DOM after navigation: old Text nodes (and their originals) are gone.
   translated = false;
-  if (issuePage) scheduleAutoTranslate();
+  if (page) scheduleAutoTranslate();
 }
 
 // GitHub's React issue UI no longer fires turbo:load on soft navigation,

@@ -68,10 +68,6 @@ legend {
   font-weight: 600;
 }
 
-.category.disabled {
-  opacity: 0.45;
-}
-
 .status {
   margin-top: 10px;
   color: #57606a;

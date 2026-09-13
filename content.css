@@ -1,4 +1,4 @@
-/* All helper UI is scoped to body.ght-issue-page (issue detail pages only). */
+/* All helper UI is scoped to body.ght-translate-page (issue details and PR conversation tabs). */
 
 #ght-panel-button,
 #ght-panel,
@@ -6,7 +6,7 @@
   display: none;
 }
 
-body.ght-issue-page #ght-panel-button {
+body.ght-translate-page #ght-panel-button {
   display: flex;
   position: fixed;
   right: 20px;
@@ -24,7 +24,7 @@ body.ght-issue-page #ght-panel-button {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
-body.ght-issue-page #ght-panel {
+body.ght-translate-page #ght-panel {
   display: none;
   position: fixed;
   right: 20px;
@@ -39,7 +39,7 @@ body.ght-issue-page #ght-panel {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-body.ght-issue-page #ght-panel.open {
+body.ght-translate-page #ght-panel.open {
   display: block;
 }
 
@@ -84,7 +84,7 @@ body.ght-issue-page #ght-panel.open {
   line-height: 1;
 }
 
-body.ght-issue-page #ght-status {
+body.ght-translate-page #ght-status {
   display: block;
   position: fixed;
   right: 76px;
@@ -98,18 +98,18 @@ body.ght-issue-page #ght-status {
   font-family: system-ui, sans-serif;
 }
 
-body.ght-issue-page #ght-status[hidden] {
+body.ght-translate-page #ght-status[hidden] {
   display: none;
 }
 
 /* Dark mode (GitHub dark theme palettes) */
 @media (prefers-color-scheme: dark) {
-  body.ght-issue-page #ght-panel-button {
+  body.ght-translate-page #ght-panel-button {
     border-color: #3d444d;
     background: #212830;
   }
 
-  body.ght-issue-page #ght-panel {
+  body.ght-translate-page #ght-panel {
     border-color: #3d444d;
     background: #151b23;
     color: #f0f6fc;

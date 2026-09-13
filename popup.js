@@ -21,7 +21,7 @@ const sourceSelect = $('source-language');
 const targetSelect = $('target-language');
 const toggleButton = $('toggle-translate');
 const autoCheckbox = $('auto-translate');
-const areaCheckboxes = document.querySelectorAll('input[data-area]');
+const areaCheckboxes = document.querySelectorAll('input[data-page][data-area]');
 const statusEl = $('status');
 
 function populateSelects(settings) {
@@ -39,9 +39,9 @@ function populateSelects(settings) {
 }
 
 function collectSettings() {
-  const areas = {};
+  const areas = { issue: {}, pull: {} };
   for (const checkbox of areaCheckboxes) {
-    areas[checkbox.dataset.area] = checkbox.checked;
+    areas[checkbox.dataset.page][checkbox.dataset.area] = checkbox.checked;
   }
   return {
     source: sourceSelect.value,
@@ -76,7 +76,7 @@ function renderToggle(response) {
   if (!response || !response.supported) {
     toggleButton.disabled = true;
     toggleButton.textContent = 'Translate';
-    setStatus('Open a GitHub issue page to translate.');
+    setStatus('Open a GitHub issue or pull request page to translate.');
     return;
   }
   toggleButton.disabled = false;
@@ -103,7 +103,7 @@ for (const checkbox of areaCheckboxes) {
   populateSelects(settings);
   autoCheckbox.checked = settings.auto;
   for (const checkbox of areaCheckboxes) {
-    checkbox.checked = settings.areas[checkbox.dataset.area];
+    checkbox.checked = settings.areas[checkbox.dataset.page][checkbox.dataset.area];
   }
 
   renderToggle(await sendMessageToTab({ type: 'get-state' }));

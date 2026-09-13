@@ -36,3 +36,9 @@ Issue details and issue lists, PR conversation tabs and PR lists, and the
 README rendered on repository overview pages (repo root and `/tree`
 views). Other PR tabs (files, commits), markdown file blob views, wikis
 and releases are out of scope by design.
+
+## Icon
+
+The extension icon (`icons/`) is a mascot-badge illustration.
+`icons/icon-source.png` is the original artwork; the 16/32/48/128 px PNGs are
+rendered from it (white background removed, corners transparent).

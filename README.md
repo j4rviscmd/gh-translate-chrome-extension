@@ -19,7 +19,7 @@ built-in Translator API. No external services, no API keys.
 - **Toolbar popup**: toggle page translation, pick the language pair
   (from → to), turn auto-translate on page load on/off, and choose which
   areas to translate (title / body & comments / list titles) separately
-  for issues and pull requests.
+  for issues, pull requests, and READMEs (content only).
 - **Bottom-right button on issue/PR pages**: opens an input box. Type in
   your language, get the translated text (reverse direction), copy it into
   the comment box.
@@ -31,5 +31,7 @@ on first use) and left untranslated.
 
 ## Scope
 
-Issue details and issue lists, PR conversation tabs and PR lists. Other
-PR tabs (files, commits) are out of scope by design.
+Issue details and issue lists, PR conversation tabs and PR lists, and the
+README rendered on repository overview pages (repo root and `/tree`
+views). Other PR tabs (files, commits), markdown file blob views, wikis
+and releases are out of scope by design.

@@ -1,12 +1,20 @@
-// Translates GitHub issue/PR pages with Chrome's built-in Translator API (Chrome 138+).
-// Scope: issue details and PR conversation tabs.
+// Translates GitHub issue/PR pages and repository READMEs with Chrome's
+// built-in Translator API (Chrome 138+).
+// Scope: issue details, PR conversation tabs, and the README rendered on the
+// repository overview.
 
 // Anchored patterns: details and list pages are distinct surfaces; PR detail
 // matches the conversation tab only (/files, /commits subpaths are out of
-// scope by design).
+// scope by design). The readme pattern also matches two-segment non-repo
+// pages (/orgs/x etc.), which is harmless: they render no article.markdown-body.
 const DETAIL_PATTERNS = {
   issue: /\/issues\/\d+\/?$/,
   pull: /\/pull\/\d+\/?$/,
+  // Note: relies on GitHub's 2026-09 overview DOM, where the old #readme box
+  // is gone and the README renders as the page's only article.markdown-body
+  // (live-measured 2026-09) — a GitHub DOM change makes readme translation
+  // silently stop or over-match.
+  readme: /^\/[^/]+\/[^/]+(\/tree\/.*)?\/?$/,
 };
 
 const LIST_PATTERNS = {
@@ -15,9 +23,9 @@ const LIST_PATTERNS = {
 };
 
 function currentPage() {
-  for (const page of ['issue', 'pull']) {
+  for (const page of Object.keys(DETAIL_PATTERNS)) {
     if (DETAIL_PATTERNS[page].test(location.pathname)) return page;
-    if (LIST_PATTERNS[page].test(location.pathname)) return page;
+    if (LIST_PATTERNS[page]?.test(location.pathname)) return page;
   }
   return null;
 }
@@ -28,8 +36,11 @@ function currentPage() {
 // merely contain a "compare" directory don't show the helper button.
 const COMPOSER_PATTERNS = [/\/issues\/new(\/choose)?\/?$/, /^\/[^/]+\/[^/]+\/compare\//];
 
+// The helper is for drafting comments, so readme pages (no comment box)
+// only get the status toast, not the button/panel.
 function hasHelperUI() {
-  return currentPage() !== null || COMPOSER_PATTERNS.some((p) => p.test(location.pathname));
+  const page = currentPage();
+  return (page !== null && page !== 'readme') || COMPOSER_PATTERNS.some((p) => p.test(location.pathname));
 }
 
 // Selectors verified against GitHub's React issue/PR pages (2026-09).
@@ -54,7 +65,7 @@ const LIST_SELECTORS = {
 function activeSelectors() {
   const page = currentPage();
   if (!page) return [];
-  if (LIST_PATTERNS[page].test(location.pathname)) {
+  if (LIST_PATTERNS[page]?.test(location.pathname)) {
     return settings.areas[page].list ? [LIST_SELECTORS[page]] : [];
   }
   return Object.entries(AREA_SELECTORS)
@@ -538,7 +549,12 @@ function onPageChange() {
   // UI (button/panel/status); buildUI() no-ops while still attached.
   buildUI();
   const page = currentPage();
-  document.body.classList.toggle('ght-translate-page', hasHelperUI());
+  // Two gates: helper surfaces get the button/panel, every translatable
+  // page (readme included) and composers (panel pack downloads) get the
+  // status toast.
+  const helper = hasHelperUI();
+  document.body.classList.toggle('ght-translate-page', helper);
+  document.body.classList.toggle('ght-status-page', page !== null || helper);
   if (!page) {
     panel?.classList.remove('open');
     hideStatus();

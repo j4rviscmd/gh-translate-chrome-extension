@@ -1,4 +1,6 @@
-/* All helper UI is scoped to body.ght-translate-page (issue details and PR conversation tabs). */
+/* Helper UI is scoped to body.ght-translate-page (issue/PR surfaces and
+   composers); the status toast to body.ght-status-page (any translatable
+   page, readme included). */
 
 #ght-panel-button,
 #ght-panel,
@@ -84,7 +86,11 @@ body.ght-translate-page #ght-panel.open {
   line-height: 1;
 }
 
-body.ght-translate-page #ght-status {
+/* Why: the toast is gated by its own class instead of ght-translate-page so
+   it also shows on pages with no helper button (readme overview pages), and
+   stays on composer pages, where the panel's language-pack download progress
+   is reported through it (see onPageChange in content.js). */
+body.ght-status-page #ght-status {
   display: block;
   position: fixed;
   right: 76px;
@@ -98,7 +104,7 @@ body.ght-translate-page #ght-status {
   font-family: system-ui, sans-serif;
 }
 
-body.ght-translate-page #ght-status[hidden] {
+body.ght-status-page #ght-status[hidden] {
   display: none;
 }
 

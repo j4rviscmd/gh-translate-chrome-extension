@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
   areas: {
     issue: { title: true, body: true, list: true },
     pull: { title: true, body: true, list: true },
+    readme: { body: true },
   },
 };
 
@@ -23,6 +24,7 @@ function normalizeSettings(stored) {
     areas: {
       issue: { ...DEFAULT_SETTINGS.areas.issue, ...migrated.issue },
       pull: { ...DEFAULT_SETTINGS.areas.pull, ...migrated.pull },
+      readme: { ...DEFAULT_SETTINGS.areas.readme, ...migrated.readme },
     },
   };
 }

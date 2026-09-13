@@ -47,7 +47,7 @@ data. See the privacy policy for details.
 
 ## Category
 
-Productivity
+Developer Tools
 
 ## Language
 

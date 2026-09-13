@@ -1,5 +1,5 @@
 # CLAUDE.md
 
-- コミット時ルール
-  - コミット前にはレビューを行うこと
-  - `main` への直接コミット禁止。PR を経由すること
+- Commit rules
+  - Run a review before committing
+  - Never commit directly to main; go through a pull request

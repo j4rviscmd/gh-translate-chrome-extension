@@ -22,6 +22,16 @@ function currentPage() {
   return null;
 }
 
+// Composer pages (new issue, new PR) have no translation targets, but the
+// bottom-right input helper is shown there for drafting text.
+// Why: /compare/ is anchored to owner/repo scope so code-view paths that
+// merely contain a "compare" directory don't show the helper button.
+const COMPOSER_PATTERNS = [/\/issues\/new(\/choose)?\/?$/, /^\/[^/]+\/[^/]+\/compare\//];
+
+function hasHelperUI() {
+  return currentPage() !== null || COMPOSER_PATTERNS.some((p) => p.test(location.pathname));
+}
+
 // Selectors verified against GitHub's React issue/PR pages (2026-09).
 // main h1: the single page title on both detail surfaces, scoped to <main>
 // so Primer dialog titles (also rendered as h1) are never picked up;
@@ -434,7 +444,7 @@ function onPageChange() {
   // UI (button/panel/status); buildUI() no-ops while still attached.
   buildUI();
   const page = currentPage();
-  document.body.classList.toggle('ght-translate-page', !!page);
+  document.body.classList.toggle('ght-translate-page', hasHelperUI());
   if (!page) {
     panel?.classList.remove('open');
     hideStatus();

@@ -5,8 +5,8 @@ const DEFAULT_SETTINGS = {
   target: 'ja',
   auto: true,
   areas: {
-    issue: { title: true, body: true },
-    pull: { title: true, body: true },
+    issue: { title: true, body: true, list: true },
+    pull: { title: true, body: true, list: true },
   },
 };
 

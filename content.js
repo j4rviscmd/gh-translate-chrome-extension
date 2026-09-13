@@ -1,22 +1,30 @@
 // Translates GitHub issue/PR pages with Chrome's built-in Translator API (Chrome 138+).
 // Scope: issue details and PR conversation tabs.
 
-// Anchored patterns: pull matches the conversation tab only (/files,
-// /commits subpaths are out of scope by design).
-const PAGE_PATTERNS = {
+// Anchored patterns: details and list pages are distinct surfaces; PR detail
+// matches the conversation tab only (/files, /commits subpaths are out of
+// scope by design).
+const DETAIL_PATTERNS = {
   issue: /\/issues\/\d+\/?$/,
   pull: /\/pull\/\d+\/?$/,
 };
 
+const LIST_PATTERNS = {
+  issue: /\/issues\/?$/,
+  pull: /\/pulls\/?$/,
+};
+
 function currentPage() {
-  if (PAGE_PATTERNS.issue.test(location.pathname)) return 'issue';
-  if (PAGE_PATTERNS.pull.test(location.pathname)) return 'pull';
+  for (const page of ['issue', 'pull']) {
+    if (DETAIL_PATTERNS[page].test(location.pathname)) return page;
+    if (LIST_PATTERNS[page].test(location.pathname)) return page;
+  }
   return null;
 }
 
 // Selectors verified against GitHub's React issue/PR pages (2026-09).
-// main h1: the single page title on both surfaces, scoped to <main> so
-// Primer dialog titles (also rendered as h1) are never picked up;
+// main h1: the single page title on both detail surfaces, scoped to <main>
+// so Primer dialog titles (also rendered as h1) are never picked up;
 // .markdown-title: the sticky header title mounted after scrolling
 // (bdi on issues, span on PRs); .markdown-body: issue/PR descriptions and
 // comments. Diff tables on the PR files tab live outside these selectors,
@@ -26,9 +34,19 @@ const AREA_SELECTORS = {
   body: ['.markdown-body'],
 };
 
+// On list pages only the row title links are translated; the h1 ("All
+// issues" etc.) is UI chrome and stays untranslated.
+const LIST_SELECTORS = {
+  issue: 'a[data-hovercard-type="issue"]',
+  pull: 'a[data-hovercard-type="pull_request"]',
+};
+
 function activeSelectors() {
   const page = currentPage();
   if (!page) return [];
+  if (LIST_PATTERNS[page].test(location.pathname)) {
+    return settings.areas[page].list ? [LIST_SELECTORS[page]] : [];
+  }
   return Object.entries(AREA_SELECTORS)
     .filter(([area]) => settings.areas[page][area])
     .flatMap(([, selectors]) => selectors);
@@ -240,7 +258,12 @@ function restorePage() {
   // Walk ALL selectors, not just active areas: an area disabled mid-run
   // must still get its already-translated nodes restored (and their
   // originals entries dropped, or re-enabling later would skip them).
-  const allSelectors = Object.values(AREA_SELECTORS).flat();
+  // List selectors are included for the same reason; on detail pages they
+  // simply match nothing translated and no-op.
+  const allSelectors = [
+    ...Object.values(AREA_SELECTORS).flat(),
+    ...Object.values(LIST_SELECTORS),
+  ];
   for (const node of collectTargetNodes(allSelectors)) {
     const original = originals.get(node);
     if (original !== undefined) {

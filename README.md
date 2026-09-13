@@ -18,8 +18,8 @@ built-in Translator API. No external services, no API keys.
 
 - **Toolbar popup**: toggle page translation, pick the language pair
   (from → to), turn auto-translate on page load on/off, and choose which
-  areas to translate (title / body & comments) separately for issues and
-  pull requests.
+  areas to translate (title / body & comments / list titles) separately
+  for issues and pull requests.
 - **Bottom-right button on issue/PR pages**: opens an input box. Type in
   your language, get the translated text (reverse direction), copy it into
   the comment box.
@@ -29,5 +29,5 @@ download progress is shown near the bottom-right button.
 
 ## Scope
 
-Issue detail pages and pull request conversation tabs. Other PR tabs
-(files, commits) are out of scope by design.
+Issue details and issue lists, PR conversation tabs and PR lists. Other
+PR tabs (files, commits) are out of scope by design.

@@ -1,7 +1,7 @@
 // Translates GitHub issue/PR pages and repository READMEs with Chrome's
 // built-in Translator API (Chrome 138+).
-// Scope: issue details, PR conversation tabs, and the README rendered on the
-// repository overview.
+// Scope: issue details, PR conversation tabs, the README rendered on the
+// repository overview, and issue panes on GitHub Projects boards.
 
 // Anchored patterns: details and list pages are distinct surfaces; PR detail
 // matches the conversation tab only (/files, /commits subpaths are out of
@@ -22,7 +22,20 @@ const LIST_PATTERNS = {
   pull: /\/pulls\/?$/,
 };
 
+// Projects boards render issue panes as an overlay dialog. The path is stable
+// (with or without a /views/{v} segment, live-measured 2026-09); the pane is
+// open only while the query string carries pane=issue, so the search must be
+// part of the page test. PR panes use pane=issue too.
+const PROJECTS_PATTERN = /\/(orgs|users)\/[^/]+\/projects\/\d+(\/views\/\d+)?\/?$/;
+
 function currentPage() {
+  // Note: any other query change on a board URL (e.g. filterQuery=) also
+  // counts as a page change and resets translation state, because currentPath()
+  // compares pathname+search. Issue #9 proposed comparing only pane/itemId
+  // if spurious resets become a problem.
+  if (PROJECTS_PATTERN.test(location.pathname) && new URLSearchParams(location.search).get('pane') === 'issue') {
+    return 'projects';
+  }
   for (const page of Object.keys(DETAIL_PATTERNS)) {
     if (DETAIL_PATTERNS[page].test(location.pathname)) return page;
     if (LIST_PATTERNS[page]?.test(location.pathname)) return page;
@@ -52,9 +65,16 @@ function hasHelperUI() {
 // (bdi on issues, span on PRs); .markdown-body: issue/PR descriptions and
 // comments. Diff tables on the PR files tab live outside these selectors,
 // so code is naturally excluded.
+const TITLE_SELECTORS = ['main h1', '.markdown-title'];
 const AREA_SELECTORS = {
-  title: ['main h1', '.markdown-title'],
-  body: ['.markdown-body'],
+  issue: { title: TITLE_SELECTORS, body: ['.markdown-body'] },
+  pull: { title: TITLE_SELECTORS, body: ['.markdown-body'] },
+  readme: { body: ['.markdown-body'] },
+  // Projects panes (live-measured 2026-09): the issue title renders as
+  // .markdown-title inside the overlay dialog; main h1 is the board title,
+  // which is UI chrome and must not be translated. Board card titles carry
+  // no .markdown-title class, so they never match.
+  projects: { title: ['.markdown-title'], body: ['.markdown-body'] },
 };
 
 // On list pages only the row title links are translated; the h1 ("All
@@ -70,7 +90,7 @@ function activeSelectors() {
   if (LIST_PATTERNS[page]?.test(location.pathname)) {
     return settings.areas[page].list ? [LIST_SELECTORS[page]] : [];
   }
-  return Object.entries(AREA_SELECTORS)
+  return Object.entries(AREA_SELECTORS[page])
     .filter(([area]) => settings.areas[page][area])
     .flatMap(([, selectors]) => selectors);
 }
@@ -348,6 +368,10 @@ function applyRerun() {
 // would otherwise start an infinite observer-drain loop that freezes the page.
 // Catches elements React mounts after initial render: lazy-loaded comments
 // (.markdown-body) and the sticky header title (.markdown-title).
+// Why: mutations *inside* an already-mounted target (GitHub re-renders the
+// issue body after a task-list checkbox toggle) replace our translated Text
+// nodes with fresh originals; re-queueing the whole container re-translates
+// just those — originals.has() skips nodes that stayed translated.
 const observer = new MutationObserver((mutations) => {
   handlePossibleUrlChange();
   if (!translated && !translating) return;
@@ -356,6 +380,15 @@ const observer = new MutationObserver((mutations) => {
   let added = false;
   for (const mutation of mutations) {
     if (mutation.target.closest?.('#ght-panel-button, #ght-panel, #ght-status')) continue;
+    if (!mutation.addedNodes.length) continue;
+    // Self-trigger safety: our own nodeValue writes are characterData
+    // mutations with no addedNodes, so they never reach this point.
+    const container = mutation.target.closest?.(selector);
+    if (container) {
+      pendingComments.push(container);
+      added = true;
+      continue;
+    }
     for (const node of mutation.addedNodes) {
       if (node.nodeType !== Node.ELEMENT_NODE) continue;
       if (node.matches(selector)) pendingComments.push(node);
@@ -373,7 +406,7 @@ function restorePage() {
   // List selectors are included for the same reason; on detail pages they
   // simply match nothing translated and no-op.
   const allSelectors = [
-    ...Object.values(AREA_SELECTORS).flat(),
+    ...Object.values(AREA_SELECTORS).flatMap((areas) => Object.values(areas).flat()),
     ...Object.values(LIST_SELECTORS),
   ];
   for (const node of collectTargetNodes(allSelectors)) {

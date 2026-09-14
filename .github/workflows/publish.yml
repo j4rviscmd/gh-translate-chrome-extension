@@ -2,10 +2,11 @@ name: Publish
 
 # Uploads the store package to the Chrome Web Store and submits it for
 # review via the Publishing API v2 (plain curl, no third-party action).
-# Runs on published releases and version tags (v0.1.1, v1.0.0, ...),
-# and manually. release-please creates tags via the API, which fires
-# the release event but not push, so the release trigger is what
-# automated runs actually ride on.
+# Runs on version tags (v0.1.1, v1.0.0, ...) and manually. Automated
+# runs ride on workflow_call from release-please.yml (release_created
+# output): events caused by the default GITHUB_TOKEN — the release and
+# tag-push that release-please creates via the API — never trigger
+# another workflow, so event-based triggers cannot automate this.
 # Secrets (set in repo settings, see issue #6):
 #   CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN - OAuth credentials
 #   CWS_PUBLISHER_ID - store account publisher ID (dashboard > Account)
@@ -13,9 +14,13 @@ name: Publish
 on:
   push:
     tags: ['v*']
-  release:
-    types: [published]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish (defaults to the triggering ref)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -25,14 +30,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
 
       # The store rejects a version it has already seen, so the tag and
       # manifest must move together; fail here instead of at upload.
       - name: Check tag matches manifest version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           VERSION="v$(node -p "require('./manifest.json').version")"
-          if [ "$VERSION" != "${GITHUB_REF_NAME}" ]; then
-            echo "tag $GITHUB_REF_NAME does not match manifest version $VERSION" >&2
+          if [ "$VERSION" != "${TAG}" ]; then
+            echo "tag $TAG does not match manifest version $VERSION" >&2
             exit 1
           fi
 

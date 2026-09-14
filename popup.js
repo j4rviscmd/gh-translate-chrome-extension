@@ -40,7 +40,7 @@ function populateSelects(settings) {
 }
 
 function collectSettings() {
-  const areas = { issue: {}, pull: {}, readme: {} };
+  const areas = { issue: {}, pull: {}, readme: {}, projects: {} };
   for (const checkbox of areaCheckboxes) {
     areas[checkbox.dataset.page][checkbox.dataset.area] = checkbox.checked;
   }
@@ -78,7 +78,7 @@ function renderToggle(response) {
   if (!response || !response.supported) {
     toggleButton.disabled = true;
     toggleButton.textContent = 'Translate';
-    setStatus('Open a GitHub issue, pull request, or repository page to translate.');
+    setStatus('Open a GitHub issue, pull request, repository page, or Projects issue pane to translate.');
     return;
   }
   toggleButton.disabled = false;

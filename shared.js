@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
     issue: { title: true, body: true, list: true },
     pull: { title: true, body: true, list: true },
     readme: { body: true },
+    projects: { title: true, body: true },
   },
 };
 
@@ -26,6 +27,7 @@ function normalizeSettings(stored) {
       issue: { ...DEFAULT_SETTINGS.areas.issue, ...migrated.issue },
       pull: { ...DEFAULT_SETTINGS.areas.pull, ...migrated.pull },
       readme: { ...DEFAULT_SETTINGS.areas.readme, ...migrated.readme },
+      projects: { ...DEFAULT_SETTINGS.areas.projects, ...migrated.projects },
     },
   };
 }

@@ -2,10 +2,14 @@
   "manifest_version": 3,
   "minimum_chrome_version": "138",
   "name": "GitHub Translate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Translate GitHub issue/PR content and READMEs with Chrome's built-in Translator API",
-  "permissions": ["storage"],
-  "host_permissions": ["https://github.com/*"],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://github.com/*"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -18,9 +22,16 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://github.com/*"],
-      "js": ["shared.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://github.com/*"
+      ],
+      "js": [
+        "shared.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ]

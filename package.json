@@ -1,6 +1,6 @@
 {
   "name": "github-translate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Chrome extension that translates GitHub issue/PR content and READMEs with Chrome's built-in Translator API. Version is managed by release-please; package.json is not shipped in the store zip."
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.2.0...v0.3.0) (2026-09-14)
+
+
+### Features
+
+* translate GitHub Projects issue panes ([#14](https://github.com/j4rviscmd/gh-translate-chrome-extension/issues/14)) ([c572719](https://github.com/j4rviscmd/gh-translate-chrome-extension/commit/c5727192128753a008658a1b9bf7c38a45b62082)), closes [#9](https://github.com/j4rviscmd/gh-translate-chrome-extension/issues/9)
+
 ## [0.2.0](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.1.0...v0.2.0) (2026-09-14)
 
 

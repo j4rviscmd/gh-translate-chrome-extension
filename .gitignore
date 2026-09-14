@@ -3,3 +3,5 @@
 pw-config.ini
 store/package/
 .env
+.worktrees/
+excalidraw.log

@@ -2,7 +2,10 @@ name: Publish
 
 # Uploads the store package to the Chrome Web Store and submits it for
 # review via the Publishing API v2 (plain curl, no third-party action).
-# Runs on version tags (v0.1.1, v1.0.0, ...) and manually.
+# Runs on published releases and version tags (v0.1.1, v1.0.0, ...),
+# and manually. release-please creates tags via the API, which fires
+# the release event but not push, so the release trigger is what
+# automated runs actually ride on.
 # Secrets (set in repo settings, see issue #6):
 #   CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN - OAuth credentials
 #   CWS_PUBLISHER_ID - store account publisher ID (dashboard > Account)
@@ -10,6 +13,8 @@ name: Publish
 on:
   push:
     tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:

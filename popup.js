@@ -22,6 +22,7 @@ const targetSelect = $('target-language');
 const toggleButton = $('toggle-translate');
 const autoCheckbox = $('auto-translate');
 const helperCheckbox = $('helper-toggle');
+const concurrencyInput = $('concurrency');
 const areaCheckboxes = document.querySelectorAll('input[data-page][data-area]');
 const statusEl = $('status');
 
@@ -49,6 +50,8 @@ function collectSettings() {
     target: targetSelect.value,
     auto: autoCheckbox.checked,
     helper: helperCheckbox.checked,
+    // Raw on purpose (NaN when emptied): normalizeSettings sanitizes on read.
+    concurrency: concurrencyInput.valueAsNumber,
     areas,
   };
 }
@@ -97,6 +100,7 @@ sourceSelect.addEventListener('change', saveSettings);
 targetSelect.addEventListener('change', saveSettings);
 autoCheckbox.addEventListener('change', saveSettings);
 helperCheckbox.addEventListener('change', saveSettings);
+concurrencyInput.addEventListener('change', saveSettings);
 for (const checkbox of areaCheckboxes) {
   checkbox.addEventListener('change', saveSettings);
 }
@@ -106,6 +110,7 @@ for (const checkbox of areaCheckboxes) {
   populateSelects(settings);
   autoCheckbox.checked = settings.auto;
   helperCheckbox.checked = settings.helper;
+  concurrencyInput.value = settings.concurrency;
   for (const checkbox of areaCheckboxes) {
     checkbox.checked = settings.areas[checkbox.dataset.page][checkbox.dataset.area];
   }

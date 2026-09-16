@@ -99,6 +99,33 @@ function activeSelectors() {
 
 const INPUT_DEBOUNCE_MS = 600;
 
+// Fixed-lane worker pool; lane count is the settings.concurrency value
+// (popup-tunable, default 8). Chrome's Translator API documents translations
+// as internally sequential; raising it is harmless if so, and wins when the
+// engine does run inferences in parallel. On the first error, lanes stop
+// picking new work, in-flight items finish, then the first error rethrows —
+// matching the serial loop's error semantics (translatePage's
+// activation-retry path and the originals.has() skip rely on it).
+async function runPool(items, worker) {
+  let next = 0;
+  let firstError;
+  await Promise.all(
+    Array.from({ length: Math.min(settings.concurrency, items.length) }, async () => {
+      while (!firstError) {
+        const i = next++;
+        if (i >= items.length) return;
+        try {
+          await worker(items[i], i);
+        } catch (err) {
+          firstError ??= err;
+          return;
+        }
+      }
+    })
+  );
+  if (firstError) throw firstError;
+}
+
 let settings = structuredClone(DEFAULT_SETTINGS);
 let translated = false;
 let translating = false;
@@ -243,7 +270,12 @@ function collectTargetNodes(selectors = activeSelectors()) {
       collectTextNodes(element, nodes);
     }
   }
-  return nodes;
+  // Selectors overlap (e.g. a # heading inside .markdown-body matches both
+  // `main h1` and `.markdown-body`), so the same Text node can be collected
+  // twice. Serial translation absorbed duplicates via originals.has(), but
+  // concurrent lanes could both pass that check and record translated text
+  // as the "original" — dedupe here so every node is processed once.
+  return [...new Set(nodes)];
 }
 
 async function translateNodes(nodes) {
@@ -256,13 +288,19 @@ async function translateNodes(nodes) {
     console.warn('[GitHub Translate] LanguageDetector unavailable', err);
     return null;
   });
-  for (const node of nodes) {
-    if (originals.has(node)) continue;
-    if (await isLanguage(node.nodeValue, settings.target, detector)) continue;
+  let done = 0;
+  showStatus(`Translating… 0/${nodes.length}`);
+  await runPool(nodes, async (node) => {
+    // Progress counts every processed node — detect-skips and already
+    // translated nodes included — so the counter never stalls.
+    const tick = () => showStatus(`Translating… ${++done}/${nodes.length}`);
+    if (originals.has(node)) return tick();
+    if (await isLanguage(node.nodeValue, settings.target, detector)) return tick();
     const result = await translator.translate(node.nodeValue);
     originals.set(node, node.nodeValue);
     node.nodeValue = result;
-  }
+    tick();
+  });
 }
 
 async function translatePage() {
@@ -485,11 +523,12 @@ async function translatePanelInput() {
     const detector = await getDetector().catch(() => null);
     // Translator.translate() collapses newlines, so translate line by line.
     // Lines already in the page language (source) pass through untouched.
-    const lines = [];
-    for (const line of text.split('\n')) {
+    // Lines translate concurrently; order is kept by writing back by index.
+    const lines = text.split('\n');
+    await runPool(lines, async (line, i) => {
       const passthrough = !line.trim() || (await isLanguage(line, settings.source, detector));
-      lines.push(passthrough ? line : await translator.translate(line));
-    }
+      lines[i] = passthrough ? line : await translator.translate(line);
+    });
     if (seq !== requestSeq) return; // a newer input superseded this request
     panelOutput.textContent = lines.join('\n');
   } catch (err) {

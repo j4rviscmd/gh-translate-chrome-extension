@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.3.0...v0.4.0) (2026-09-16)
+
+
+### Features
+
+* translate nodes in parallel with tunable concurrency ([7904988](https://github.com/j4rviscmd/gh-translate-chrome-extension/commit/790498817efd128c3256d3acf4d5a4bbaf89532f))
+* translate nodes in parallel with tunable concurrency ([85de9dc](https://github.com/j4rviscmd/gh-translate-chrome-extension/commit/85de9dc77e61ed10114df25ae6651e54514d1ddd))
+
 ## [0.3.0](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.2.0...v0.3.0) (2026-09-14)
 
 

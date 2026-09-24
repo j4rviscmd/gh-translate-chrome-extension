@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.4.0...v0.4.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* match list row titles by -title-link testid suffix ([#19](https://github.com/j4rviscmd/gh-translate-chrome-extension/issues/19)) ([ce18f10](https://github.com/j4rviscmd/gh-translate-chrome-extension/commit/ce18f10b76147921215a5f8cc7f769bfd9118ce4))
+
 ## [0.4.0](https://github.com/j4rviscmd/gh-translate-chrome-extension/compare/v0.3.0...v0.4.0) (2026-09-16)
 
 

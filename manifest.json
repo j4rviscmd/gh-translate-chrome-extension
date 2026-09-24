@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "minimum_chrome_version": "138",
   "name": "GitHub Translate",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Translate GitHub issue/PR content and READMEs with Chrome's built-in Translator API",
   "permissions": [
     "storage"

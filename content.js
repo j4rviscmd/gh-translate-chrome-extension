@@ -79,9 +79,15 @@ const AREA_SELECTORS = {
 
 // On list pages only the row title links are translated; the h1 ("All
 // issues" etc.) is UI chrome and stays untranslated.
+// GitHub ships different data-testid values per rollout bucket and surface
+// (issue-pr-title-link, issue-listitem-title-link, listitem-title-link — all
+// live-measured 2026-09), so match the stable -title-link suffix instead of
+// exact names. data-hovercard-type is kept for buckets still on the pre-testid
+// DOM. CSS-module class names on these anchors are hashed and unstable —
+// never select by them.
 const LIST_SELECTORS = {
-  issue: 'a[data-hovercard-type="issue"]',
-  pull: 'a[data-hovercard-type="pull_request"]',
+  issue: 'a[data-testid$="title-link"], a[data-hovercard-type="issue"]',
+  pull: 'a[data-testid$="title-link"], a[data-hovercard-type="pull_request"]',
 };
 
 function activeSelectors() {
